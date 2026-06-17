@@ -1,0 +1,203 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  /* Brand extras */
+  --color-canvas: var(--canvas);
+  --color-canvas-soft: var(--canvas-soft);
+  --color-hairline: var(--hairline);
+  --color-ink-strong: var(--ink-strong);
+  --color-body: var(--body-text);
+
+  /* Course status */
+  --color-status-regulaer: var(--status-regulaer);
+  --color-status-vertreten: var(--status-vertreten);
+  --color-status-abgesagt: var(--status-abgesagt);
+
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) * 1.33);
+  --radius-xl: calc(var(--radius) * 1.66);
+  --radius-2xl: calc(var(--radius) * 2);
+}
+
+/* =========================================================
+   FIT-MANAGER — Voltagent dark brand. Dark-only app.
+   ========================================================= */
+:root,
+.dark {
+  --radius: 0.5rem; /* 8px cards; buttons/inputs ~6px via radius-sm */
+
+  --canvas: #101010;
+  --canvas-soft: #1a1a1a;
+  --hairline: #3d3a39;
+  --ink-strong: #ffffff;
+  --body-text: #bdbdbd;
+
+  --background: #101010;
+  --foreground: #f2f2f2;
+
+  --card: #101010;
+  --card-foreground: #f2f2f2;
+  --popover: #141414;
+  --popover-foreground: #f2f2f2;
+
+  --primary: #00d992;
+  --primary-foreground: #0a0a0a;
+
+  --secondary: #1a1a1a;
+  --secondary-foreground: #f2f2f2;
+
+  --muted: #1a1a1a;
+  --muted-foreground: #8b949e;
+
+  --accent: #1a1a1a;
+  --accent-foreground: #f2f2f2;
+
+  --destructive: #f87171;
+
+  --border: #3d3a39;
+  --input: #1a1a1a;
+  --ring: #2fd6a1;
+
+  --chart-1: #00d992;
+  --chart-2: #2fd6a1;
+  --chart-3: #10b981;
+  --chart-4: #8b949e;
+  --chart-5: #3d3a39;
+
+  /* Course status colors */
+  --status-regulaer: #00d992;
+  --status-vertreten: #f5a623;
+  --status-abgesagt: #f87171;
+
+  /* Sidebar */
+  --sidebar: #0c0c0c;
+  --sidebar-foreground: #bdbdbd;
+  --sidebar-primary: #00d992;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #1a1a1a;
+  --sidebar-accent-foreground: #f2f2f2;
+  --sidebar-border: #3d3a39;
+  --sidebar-ring: #2fd6a1;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "calt", "rlig";
+  }
+  html {
+    @apply font-sans;
+  }
+  /* Numeric / tabular elements use mono */
+  .font-numeric {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* Eyebrow — mono uppercase, green, wide tracking */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+  }
+
+  /* Hairline card on canvas */
+  .card-hairline {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius);
+  }
+
+  /* Live status pill (green dot) */
+  .pill-live::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--color-primary);
+    box-shadow: 0 0 8px var(--color-primary);
+    margin-right: 0.4rem;
+  }
+
+  /* Subtle dashed section divider — brand rhythm cue */
+  .divider-dashed {
+    height: 0;
+    border: 0;
+    border-top: 1px dashed rgba(79, 93, 117, 0.4);
+  }
+
+  /* Green glow used sparingly on hero/CTA */
+  .glow-primary {
+    box-shadow: 0 0 0 1px rgba(0, 217, 146, 0.4),
+      0 0 40px -8px rgba(0, 217, 146, 0.45);
+  }
+}
+
+/* Striped placeholder for imagery (matches design-system guidance) */
+.placeholder-striped {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.04) 0,
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px,
+    transparent 10px
+  );
+}
+
+/* Respect reduced motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

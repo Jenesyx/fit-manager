@@ -1,0 +1,316 @@
+/* ============================================================
+   VOLTAGENT DESIGN SYSTEM — colors_and_type.css
+   Dark-canvas only. Electric green accent. Inter + mono pair.
+   ============================================================ */
+
+/* -- Web fonts -------------------------------------------------
+   Inter is fetched from Google Fonts.
+   For the mono face, the brand uses SF Mono (Apple system). On the
+   web we fall back to JetBrains Mono (closest free substitute).
+   The unusual 549/550 sub-bold weight in the spec maps to JetBrains
+   Mono 500.
+--------------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* ---------- COLOR — Brand & Accent ---------- */
+  --color-primary:        #00d992;   /* Electric green — every CTA, status pill, logo glyph */
+  --color-primary-soft:   #2fd6a1;   /* Muted green — ghost buttons, focus rings */
+  --color-primary-deep:   #10b981;   /* Deep green — inline links in body */
+  --color-on-primary:     #0a0a0a;   /* Text on green CTA — near-black */
+
+  /* ---------- COLOR — Surface ---------- */
+  --color-canvas:         #101010;   /* Default page background */
+  --color-canvas-soft:    #1a1a1a;   /* Code blocks, inputs */
+  --color-hairline:       #3d3a39;   /* 1px borders everywhere */
+  --color-hairline-soft:  #b8b3b0;   /* Rare on-light dividers */
+
+  /* ---------- COLOR — Text ---------- */
+  --color-ink:            #f2f2f2;   /* Default text on dark */
+  --color-ink-strong:     #ffffff;   /* Hero headlines, high emphasis */
+  --color-body:           #bdbdbd;   /* Secondary body copy */
+  --color-mute:           #8b949e;   /* Captions, fine print */
+  --color-canvas-text-soft:#f5f6f7;  /* Code text — cooler than body */
+
+  /* ---------- COLOR — Decorative ---------- */
+  --color-dashed-divider: rgba(79, 93, 117, 0.4);
+  --color-glow-soft:      rgba(92, 88, 85, 0.2);
+
+  /* ---------- TYPOGRAPHY — Families ---------- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SFMono-Regular', 'JetBrains Mono', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+
+  /* ---------- TYPOGRAPHY — Token bundles (size / weight / line-height / tracking) ---------- */
+  /* Display */
+  --type-display-xl-size: 60px;    --type-display-xl-weight: 400; --type-display-xl-lh: 60px; --type-display-xl-tracking: -0.65px;
+  --type-display-lg-size: 36px;    --type-display-lg-weight: 400; --type-display-lg-lh: 40px; --type-display-lg-tracking: -0.9px;
+  --type-display-md-size: 24px;    --type-display-md-weight: 700; --type-display-md-lh: 32px; --type-display-md-tracking: -0.6px;
+  --type-display-sm-size: 20px;    --type-display-sm-weight: 600; --type-display-sm-lh: 28px; --type-display-sm-tracking: 0;
+  /* Eyebrows */
+  --type-eyebrow-mono-size: 14px;       --type-eyebrow-mono-weight: 600; --type-eyebrow-mono-lh: 20px; --type-eyebrow-mono-tracking: 2.52px;
+  --type-eyebrow-uppercase-size: 18px;  --type-eyebrow-uppercase-weight: 600; --type-eyebrow-uppercase-lh: 28px; --type-eyebrow-uppercase-tracking: 0.45px;
+  /* Body */
+  --type-body-lg-size: 18px;          --type-body-lg-weight: 400; --type-body-lg-lh: 28px;
+  --type-body-md-size: 16px;          --type-body-md-weight: 400; --type-body-md-lh: 26px;
+  --type-body-md-strong-size: 16px;   --type-body-md-strong-weight: 600; --type-body-md-strong-lh: 24px;
+  --type-body-sm-size: 14px;          --type-body-sm-weight: 400; --type-body-sm-lh: 20px;
+  --type-body-sm-strong-size: 14px;   --type-body-sm-strong-weight: 600; --type-body-sm-strong-lh: 23px;
+  /* Caption */
+  --type-caption-size: 12px;          --type-caption-weight: 400; --type-caption-lh: 16px;
+  --type-caption-strong-size: 12px;   --type-caption-strong-weight: 500; --type-caption-strong-lh: 16px;
+  /* Code */
+  --type-code-size: 13px;             --type-code-weight: 400; --type-code-lh: 18px;
+  --type-code-strong-size: 13px;      --type-code-strong-weight: 500; --type-code-strong-lh: 16px;
+  /* Button */
+  --type-button-md-size: 16px;        --type-button-md-weight: 600; --type-button-md-lh: 24px;
+
+  /* ---------- SPACING ---------- */
+  --space-xxs: 2px;
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  12px;
+  --space-lg:  16px;
+  --space-xl:  20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+  --space-4xl: 40px;
+  --space-5xl: 48px;
+  --space-6xl: 64px;
+
+  /* ---------- RADIUS ---------- */
+  --radius-none: 0px;
+  --radius-xs:   4px;   /* inline pills, code chips */
+  --radius-sm:   6px;   /* buttons, inputs */
+  --radius-md:   8px;   /* cards */
+  --radius-pill: 9999px;
+  --radius-full: 9999px;
+
+  /* ---------- ELEVATION ---------- */
+  --elev-0: none;
+  --elev-1: inset 0 0 0 1px var(--color-hairline);
+  --elev-2: 0 0 15px var(--color-glow-soft);
+  --elev-3: 0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(148,163,184,0.1) inset;
+
+  /* ---------- LAYOUT ---------- */
+  --container-max: 1320px;
+  --gutter: var(--space-3xl);
+}
+
+/* ============================================================
+   BASE — semantic element styling
+   ============================================================ */
+
+html, body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "calt", "rlig";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+}
+
+h1 {
+  font-family: var(--font-sans);
+  font-size: var(--type-display-xl-size);
+  font-weight: var(--type-display-xl-weight);
+  line-height: var(--type-display-xl-lh);
+  letter-spacing: var(--type-display-xl-tracking);
+  color: var(--color-ink-strong);
+  margin: 0;
+}
+h2 {
+  font-family: var(--font-sans);
+  font-size: var(--type-display-lg-size);
+  font-weight: var(--type-display-lg-weight);
+  line-height: var(--type-display-lg-lh);
+  letter-spacing: var(--type-display-lg-tracking);
+  color: var(--color-ink-strong);
+  margin: 0;
+}
+h3 {
+  font-family: var(--font-sans);
+  font-size: var(--type-display-md-size);
+  font-weight: var(--type-display-md-weight);
+  line-height: var(--type-display-md-lh);
+  letter-spacing: var(--type-display-md-tracking);
+  color: var(--color-ink);
+  margin: 0;
+}
+h4 {
+  font-family: var(--font-sans);
+  font-size: var(--type-display-sm-size);
+  font-weight: var(--type-display-sm-weight);
+  line-height: var(--type-display-sm-lh);
+  color: var(--color-ink);
+  margin: 0;
+}
+p {
+  font-family: var(--font-sans);
+  font-size: var(--type-body-md-size);
+  font-weight: var(--type-body-md-weight);
+  line-height: var(--type-body-md-lh);
+  color: var(--color-body);
+  margin: 0;
+}
+a {
+  color: var(--color-primary-deep);
+  text-decoration: none;
+}
+a:hover { color: var(--color-primary); }
+
+code, kbd, pre, samp {
+  font-family: var(--font-mono);
+  font-size: var(--type-code-size);
+  line-height: var(--type-code-lh);
+  color: var(--color-canvas-text-soft);
+}
+
+/* Eyebrow utility */
+.eyebrow-mono {
+  font-family: var(--font-sans);
+  font-size: var(--type-eyebrow-mono-size);
+  font-weight: var(--type-eyebrow-mono-weight);
+  line-height: var(--type-eyebrow-mono-lh);
+  letter-spacing: var(--type-eyebrow-mono-tracking);
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+/* ============================================================
+   COMPONENT — reusable primitives
+   ============================================================ */
+
+.btn-primary {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-family: var(--font-sans);
+  font-size: var(--type-button-md-size);
+  font-weight: var(--type-button-md-weight);
+  line-height: var(--type-button-md-lh);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-sm);
+  border: 0;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.btn-primary:hover { background: #00f5a4; }
+
+.btn-outline-on-dark {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--type-button-md-size);
+  font-weight: var(--type-button-md-weight);
+  line-height: var(--type-button-md-lh);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-hairline);
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.btn-outline-on-dark:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+.btn-ghost-green {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent;
+  color: var(--color-primary-soft);
+  font-family: var(--font-sans);
+  font-size: var(--type-button-md-size);
+  font-weight: var(--type-button-md-weight);
+  padding: var(--space-md) var(--space-lg);
+  border: 0;
+  cursor: pointer;
+}
+
+.pill-tag {
+  display: inline-flex; align-items: center; gap: var(--space-xs);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--type-body-sm-size);
+  font-weight: 500;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-pill);
+  padding: var(--space-xs) var(--space-md);
+}
+
+.pill-tag--live {
+  color: var(--color-primary);
+  border-color: rgba(0,217,146,0.4);
+}
+.pill-tag--live::before {
+  content: '';
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 8px var(--color-primary);
+}
+
+.card-feature {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  padding: var(--space-2xl);
+}
+
+.card-feature--emphasized {
+  border-width: 3px;
+}
+
+.card-feature--featured {
+  border: 2px solid var(--color-primary);
+}
+
+.code-mockup {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  font-family: var(--font-mono);
+  font-size: var(--type-code-size);
+  line-height: var(--type-code-lh);
+}
+
+.code-inline-chip {
+  display: inline-flex; align-items: center;
+  background: var(--color-canvas-soft);
+  color: var(--color-canvas-text-soft);
+  font-family: var(--font-mono);
+  font-size: var(--type-code-size);
+  line-height: var(--type-code-lh);
+  padding: var(--space-xxs) var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+
+.text-input {
+  background: var(--color-canvas-soft);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  padding: var(--space-md) var(--space-lg);
+  font-family: var(--font-sans);
+  font-size: var(--type-body-sm-size);
+  outline: none;
+}
+.text-input:focus { border-color: var(--color-primary-soft); }
+
+/* Section dashed divider — the brand's signature rhythm cue */
+.section-divider-dashed {
+  height: 0;
+  border: 0;
+  border-top: 1px dashed var(--color-dashed-divider);
+  margin: 0;
+}
+
+/* Green divider band */
+.green-divider-band {
+  background: var(--color-canvas);
+  border-top: 2px solid var(--color-primary);
+  border-bottom: 2px solid var(--color-primary);
+  height: 0;
+}
