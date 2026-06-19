@@ -24,13 +24,17 @@ export function ExpandableCourseCard({
   course,
   isRegistered,
   role,
+  registeredCount = 0,
 }: {
   course: EnrichedCourse;
   isRegistered: boolean;
   role: UserRole;
+  registeredCount?: number;
 }) {
   const [expanded, setExpanded] = useState(false);
   const cancelled = course.status === "abgesagt";
+  const spotsLeft = Math.max(0, course.max_participants - registeredCount);
+  const full = !cancelled && spotsLeft === 0;
 
   return (
     <div
@@ -80,8 +84,15 @@ export function ExpandableCourseCard({
           ) : null}
           <span className="font-numeric inline-flex items-center gap-1.5">
             <Users className="size-3.5 text-muted-foreground" />
-            max. {course.max_participants}
+            {cancelled
+              ? `max. ${course.max_participants}`
+              : `${registeredCount}/${course.max_participants} belegt`}
           </span>
+          {full ? (
+            <span className="rounded-full bg-[var(--color-status-abgesagt)]/15 px-2 py-0.5 text-xs font-medium text-[var(--color-status-abgesagt)]">
+              Ausgebucht
+            </span>
+          ) : null}
         </div>
 
         <div className="border-t border-hairline pt-3 text-sm">
@@ -144,11 +155,16 @@ export function ExpandableCourseCard({
                 Abmelden
               </Button>
             </form>
+          ) : full ? (
+            <Button type="button" disabled className="w-full">
+              Ausgebucht
+            </Button>
           ) : (
             <form action={registerForCourseAction}>
               <input type="hidden" name="course_id" value={course.id} />
               <Button type="submit" className="w-full">
-                Anmelden
+                Anmelden · noch {spotsLeft}{" "}
+                {spotsLeft === 1 ? "Platz" : "Plätze"}
               </Button>
             </form>
           )}

@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   CalendarRange,
   CalendarPlus,
+  ClipboardList,
   HeartPulse,
   Users,
   Settings,
@@ -32,6 +33,12 @@ const NAV: NavItem[] = [
     label: "Kurs erstellen",
     icon: CalendarPlus,
     show: ({ canManage }) => canManage,
+  },
+  {
+    href: "/portal/verwaltung",
+    label: "Kursverwaltung",
+    icon: ClipboardList,
+    show: ({ role }) => role === "admin",
   },
   {
     href: "/portal/krankmeldung",

@@ -62,4 +62,44 @@ export function timeRange(start: string, end: string): string {
   return `${formatTime(start)}–${formatTime(end)}`;
 }
 
+/** Last plannable day for admin series (4 weeks = 28 days). */
+export function seriesHorizonEndISO(): string {
+  return format(addDays(new Date(), 27), "yyyy-MM-dd");
+}
+
+/**
+ * Returns sorted ISO date strings within [startISO, endISO] that fall on any
+ * of the given weekday offsets (0 = Monday … 6 = Sunday), repeating every
+ * intervalWeeks. The reference week is the ISO week containing startISO.
+ */
+export function generateSeriesDates(
+  startISO: string,
+  endISO: string,
+  dowIndices: number[],
+  intervalWeeks: number,
+): string[] {
+  if (!startISO || !endISO || !dowIndices.length || intervalWeeks < 1) return [];
+  const start = parseISO(startISO);
+  const end = parseISO(endISO);
+  if (end < start) return [];
+
+  const refMonday = startOfWeek(start, { weekStartsOn: 1 });
+  const dates: string[] = [];
+  let cur = refMonday;
+  let wi = 0;
+
+  while (cur <= end) {
+    if (wi % intervalWeeks === 0) {
+      for (const dow of dowIndices) {
+        const d = addDays(cur, dow);
+        if (d >= start && d <= end) dates.push(format(d, "yyyy-MM-dd"));
+      }
+    }
+    cur = addDays(cur, 7);
+    wi++;
+  }
+
+  return dates.sort();
+}
+
 export { addDays, format, parseISO };

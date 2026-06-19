@@ -48,6 +48,7 @@ export default async function KursErstellenPage() {
         existing={existing}
         minDate={todayISO()}
         maxDate={horizonEndISO()}
+        isAdmin={profile.role === "admin"}
       />
     </div>
   );

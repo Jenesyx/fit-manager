@@ -8,14 +8,14 @@ export function MarketingNav() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Wordmark />
         <nav className="hidden items-center gap-8 text-sm text-body md:flex">
-          <a href="#funktionen" className="transition-colors hover:text-ink-strong">
-            Funktionen
+          <a href="#kurse" className="transition-colors hover:text-ink-strong">
+            Kurse
           </a>
-          <a href="#rollen" className="transition-colors hover:text-ink-strong">
-            Rollen
+          <a href="#standorte" className="transition-colors hover:text-ink-strong">
+            Standorte
           </a>
-          <a href="#ablauf" className="transition-colors hover:text-ink-strong">
-            So funktioniert&apos;s
+          <a href="#angebot" className="transition-colors hover:text-ink-strong">
+            Angebot
           </a>
         </nav>
         <div className="flex items-center gap-2">
@@ -23,7 +23,7 @@ export function MarketingNav() {
             <Link href="/anmelden">Anmelden</Link>
           </Button>
           <Button asChild className="font-semibold">
-            <Link href="/registrieren">Jetzt starten</Link>
+            <Link href="/registrieren">Mitglied werden</Link>
           </Button>
         </div>
       </div>

@@ -88,6 +88,8 @@ export type Database = {
           original_trainer_id: string | null;
           substitute_trainer_id: string | null;
           cancel_reason: string | null;
+          archived: boolean;
+          series_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -105,6 +107,8 @@ export type Database = {
           original_trainer_id?: string | null;
           substitute_trainer_id?: string | null;
           cancel_reason?: string | null;
+          archived?: boolean;
+          series_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -154,6 +158,14 @@ export type Database = {
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       can_manage_courses: { Args: Record<string, never>; Returns: boolean };
+      get_profile_names: {
+        Args: { p_ids: string[] };
+        Returns: { id: string; full_name: string }[];
+      };
+      get_course_registration_counts: {
+        Args: { p_ids: string[] };
+        Returns: { course_id: string; registered: number }[];
+      };
       handle_sick_leave: {
         Args: { p_trainer: string; p_start: string; p_end: string };
         Returns: undefined;

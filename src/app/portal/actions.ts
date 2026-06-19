@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getProfile } from "@/lib/auth";
-import { isWithinHorizon } from "@/lib/dates";
+import { getProfile, canManageCourses } from "@/lib/auth";
+import { isWithinHorizon, seriesHorizonEndISO, generateSeriesDates } from "@/lib/dates";
 import type { CourseStatus, UserRole } from "@/lib/database.types";
 
 export type ActionState = { error?: string; message?: string };
@@ -41,6 +41,49 @@ export async function createCourseAction(
     };
 
   const supabase = await createClient();
+
+  // Room rules (the DB enforces these too — checked here for friendly errors).
+  if (room_id) {
+    const { data: room } = await supabase
+      .from("rooms")
+      .select("capacity")
+      .eq("id", room_id)
+      .maybeSingle();
+    if (room && max_participants > room.capacity)
+      return {
+        error: `Die Teilnehmerzahl überschreitet die Raumkapazität (${room.capacity} Plätze).`,
+      };
+
+    if (status !== "abgesagt") {
+      const { data: clash } = await supabase
+        .from("courses")
+        .select("id")
+        .eq("room_id", room_id)
+        .eq("date", date)
+        .neq("status", "abgesagt")
+        .lt("start_time", end_time)
+        .gt("end_time", start_time)
+        .limit(1);
+      if (clash && clash.length > 0)
+        return { error: "Raum ist zu dieser Zeit bereits belegt." };
+    }
+  }
+
+  // Trainer conflict: one trainer can only run one active course per slot.
+  if (trainer_id && status !== "abgesagt") {
+    const { data: trainerClash } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("trainer_id", trainer_id)
+      .eq("date", date)
+      .neq("status", "abgesagt")
+      .lt("start_time", end_time)
+      .gt("end_time", start_time)
+      .limit(1);
+    if (trainerClash && trainerClash.length > 0)
+      return { error: "Dieser Trainer ist zu dieser Zeit bereits belegt." };
+  }
+
   const { error } = await supabase.from("courses").insert({
     name,
     description,
@@ -52,12 +95,327 @@ export async function createCourseAction(
     max_participants: Number.isFinite(max_participants) ? max_participants : 20,
     status,
   });
-  if (error) return { error: "Kurs konnte nicht gespeichert werden." };
+  if (error) {
+    // Surface the DB trigger messages (Raum belegt / Kapazität) verbatim.
+    const known = /belegt|Raumkapazität|ausgebucht|abgesagt/.test(
+      error.message ?? "",
+    );
+    return {
+      error: known ? error.message : "Kurs konnte nicht gespeichert werden.",
+    };
+  }
 
   revalidatePath("/portal/stundenplan");
   revalidatePath("/portal/kurse");
   revalidatePath("/portal/dashboard");
   return { message: `Kurs „${name}“ wurde angelegt.` };
+}
+
+// ---------- Wiederkehrende Kursserie (admin only) ----------
+export type RecurringActionState = ActionState & {
+  created?: number;
+  skipped?: { date: string; reason: string }[];
+};
+
+export async function createRecurringCoursesAction(
+  _prev: RecurringActionState,
+  formData: FormData,
+): Promise<RecurringActionState> {
+  const profile = await getProfile();
+  if (!profile) return { error: "Nicht angemeldet." };
+  if (profile.role !== "admin")
+    return { error: "Nur Admins können Serien anlegen." };
+
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim() || null;
+  const start_time = String(formData.get("start_time") ?? "");
+  const end_time = String(formData.get("end_time") ?? "");
+  const room_id = String(formData.get("room_id") ?? "") || null;
+  const trainer_id = String(formData.get("trainer_id") ?? "") || null;
+  const max_participants = Number(formData.get("max_participants") ?? 20);
+  const status = (String(formData.get("status") ?? "regulaer") ||
+    "regulaer") as CourseStatus;
+  const weekdays_raw = String(formData.get("series_weekdays") ?? "");
+  const interval_weeks = Math.max(1, Number(formData.get("series_interval") ?? 1));
+  const series_start = String(formData.get("series_start") ?? "");
+  const series_end = String(formData.get("series_end") ?? "");
+
+  if (!name || !start_time || !end_time)
+    return { error: "Bitte fülle alle Pflichtfelder aus." };
+  if (end_time <= start_time)
+    return { error: "Die Endzeit muss nach der Startzeit liegen." };
+  if (!weekdays_raw)
+    return { error: "Bitte wähle mindestens einen Wochentag aus." };
+  if (!series_start || !series_end)
+    return { error: "Bitte Zeitraum angeben." };
+  if (series_end < series_start)
+    return { error: "Das Enddatum darf nicht vor dem Startdatum liegen." };
+
+  const today = new Date().toISOString().slice(0, 10);
+  const maxEnd = seriesHorizonEndISO();
+  if (series_start < today)
+    return { error: "Das Startdatum darf nicht in der Vergangenheit liegen." };
+  if (series_end > maxEnd)
+    return { error: "Kurse können maximal 4 Wochen im Voraus geplant werden." };
+
+  const dowIndices = weekdays_raw
+    .split(",")
+    .map(Number)
+    .filter((n) => !isNaN(n) && n >= 0 && n <= 6);
+  if (!dowIndices.length)
+    return { error: "Keine gültigen Wochentage gewählt." };
+
+  const dates = generateSeriesDates(series_start, series_end, dowIndices, interval_weeks);
+  if (!dates.length)
+    return { error: "Im gewählten Zeitraum liegen keine passenden Termine." };
+
+  const supabase = await createClient();
+
+  // Capacity: check once (same room for all dates)
+  if (room_id) {
+    const { data: room } = await supabase
+      .from("rooms")
+      .select("capacity")
+      .eq("id", room_id)
+      .maybeSingle();
+    if (room && max_participants > room.capacity)
+      return {
+        error: `Die Teilnehmerzahl überschreitet die Raumkapazität (${room.capacity} Plätze).`,
+      };
+  }
+
+  // Fetch all existing courses in the range once for in-memory conflict check
+  const { data: existing } = await supabase
+    .from("courses")
+    .select("date, start_time, end_time, room_id, trainer_id")
+    .gte("date", series_start)
+    .lte("date", series_end)
+    .neq("status", "abgesagt");
+
+  const existingList = (existing ?? []) as {
+    date: string;
+    start_time: string;
+    end_time: string;
+    room_id: string | null;
+    trainer_id: string | null;
+  }[];
+
+  const series_id = crypto.randomUUID();
+  type SeriesRow = {
+    name: string;
+    description: string | null;
+    date: string;
+    start_time: string;
+    end_time: string;
+    room_id: string | null;
+    trainer_id: string | null;
+    max_participants: number;
+    status: CourseStatus;
+    series_id: string;
+  };
+  const toInsert: SeriesRow[] = [];
+  const skipped: { date: string; reason: string }[] = [];
+
+  for (const date of dates) {
+    const daySlots = existingList.filter((e) => e.date === date);
+
+    if (room_id && status !== "abgesagt") {
+      const roomClash = daySlots.some(
+        (e) =>
+          e.room_id === room_id &&
+          e.start_time < end_time &&
+          e.end_time > start_time,
+      );
+      if (roomClash) {
+        skipped.push({ date, reason: "Raum belegt" });
+        continue;
+      }
+    }
+
+    if (trainer_id && status !== "abgesagt") {
+      const trainerClash = daySlots.some(
+        (e) =>
+          e.trainer_id === trainer_id &&
+          e.start_time < end_time &&
+          e.end_time > start_time,
+      );
+      if (trainerClash) {
+        skipped.push({ date, reason: "Trainer belegt" });
+        continue;
+      }
+    }
+
+    toInsert.push({
+      name,
+      description,
+      date,
+      start_time,
+      end_time,
+      room_id,
+      trainer_id,
+      max_participants,
+      status,
+      series_id,
+    });
+    // Shadow into existingList so later same-day series entries see themselves
+    existingList.push({ date, start_time, end_time, room_id, trainer_id });
+  }
+
+  if (!toInsert.length)
+    return {
+      error:
+        "Alle Termine haben Konflikte — keine Kurse wurden angelegt.",
+      skipped,
+    };
+
+  const { error: insertError } = await supabase.from("courses").insert(toInsert);
+  if (insertError) {
+    const known = /belegt|Kapazität|ausgebucht/.test(insertError.message ?? "");
+    return {
+      error: known
+        ? insertError.message
+        : "Kurse konnten nicht gespeichert werden.",
+    };
+  }
+
+  revalidateCourses();
+  return {
+    message: `${toInsert.length} Kurs${toInsert.length === 1 ? "" : "e"} angelegt.`,
+    created: toInsert.length,
+    skipped: skipped.length ? skipped : undefined,
+  };
+}
+
+// ---------- Kurs bearbeiten / löschen / archivieren (verwalten) ----------
+function revalidateCourses() {
+  revalidatePath("/portal/verwaltung");
+  revalidatePath("/portal/kurse");
+  revalidatePath("/portal/stundenplan");
+  revalidatePath("/portal/dashboard");
+}
+
+export async function updateCourseAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const profile = await getProfile();
+  if (!profile) return { error: "Nicht angemeldet." };
+  if (!canManageCourses(profile))
+    return { error: "Keine Berechtigung, Kurse zu verwalten." };
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { error: "Kurs nicht gefunden." };
+
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim() || null;
+  const date = String(formData.get("date") ?? "");
+  const start_time = String(formData.get("start_time") ?? "");
+  const end_time = String(formData.get("end_time") ?? "");
+  const room_id = String(formData.get("room_id") ?? "") || null;
+  const trainer_id = String(formData.get("trainer_id") ?? "") || null;
+  const max_participants = Number(formData.get("max_participants") ?? 20);
+  const status = (String(formData.get("status") ?? "regulaer") ||
+    "regulaer") as CourseStatus;
+
+  if (!name || !date || !start_time || !end_time)
+    return { error: "Bitte fülle alle Pflichtfelder aus." };
+  if (end_time <= start_time)
+    return { error: "Die Endzeit muss nach der Startzeit liegen." };
+
+  const supabase = await createClient();
+
+  // Same room rules as on create, but excluding the course being edited.
+  if (room_id) {
+    const { data: room } = await supabase
+      .from("rooms")
+      .select("capacity")
+      .eq("id", room_id)
+      .maybeSingle();
+    if (room && max_participants > room.capacity)
+      return {
+        error: `Die Teilnehmerzahl überschreitet die Raumkapazität (${room.capacity} Plätze).`,
+      };
+
+    if (status !== "abgesagt") {
+      const { data: clash } = await supabase
+        .from("courses")
+        .select("id")
+        .eq("room_id", room_id)
+        .eq("date", date)
+        .neq("id", id)
+        .neq("status", "abgesagt")
+        .lt("start_time", end_time)
+        .gt("end_time", start_time)
+        .limit(1);
+      if (clash && clash.length > 0)
+        return { error: "Raum ist zu dieser Zeit bereits belegt." };
+    }
+  }
+
+  // Trainer conflict (exclude self).
+  if (trainer_id && status !== "abgesagt") {
+    const { data: trainerClash } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("trainer_id", trainer_id)
+      .eq("date", date)
+      .neq("id", id)
+      .neq("status", "abgesagt")
+      .lt("start_time", end_time)
+      .gt("end_time", start_time)
+      .limit(1);
+    if (trainerClash && trainerClash.length > 0)
+      return { error: "Dieser Trainer ist zu dieser Zeit bereits belegt." };
+  }
+
+  const { error } = await supabase
+    .from("courses")
+    .update({
+      name,
+      description,
+      date,
+      start_time,
+      end_time,
+      room_id,
+      trainer_id,
+      max_participants: Number.isFinite(max_participants) ? max_participants : 20,
+      status,
+    })
+    .eq("id", id);
+  if (error) {
+    const known = /belegt|Raumkapazität|ausgebucht|abgesagt/.test(
+      error.message ?? "",
+    );
+    return {
+      error: known ? error.message : "Kurs konnte nicht gespeichert werden.",
+    };
+  }
+
+  revalidateCourses();
+  return { message: `Kurs „${name}“ wurde aktualisiert.` };
+}
+
+export async function deleteCourseAction(formData: FormData): Promise<void> {
+  const profile = await getProfile();
+  if (!profile || !canManageCourses(profile)) return;
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("courses").delete().eq("id", id);
+  revalidateCourses();
+}
+
+export async function setCourseArchivedAction(
+  formData: FormData,
+): Promise<void> {
+  const profile = await getProfile();
+  if (!profile || !canManageCourses(profile)) return;
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const archived = String(formData.get("archived") ?? "") === "true";
+  const supabase = await createClient();
+  await supabase.from("courses").update({ archived }).eq("id", id);
+  revalidateCourses();
 }
 
 // ---------- Krankmeldung ----------

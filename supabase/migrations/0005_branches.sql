@@ -1,29 +1,27 @@
 -- ============================================================
--- Fit-Manager — seed reference data (Filialen + Räume)
--- 5 Städte am Niederrhein, je 2 Filialen = 10 Studios.
--- Jede Filiale hat exakt 3 Räume: 10 / 20 / 30 Plätze.
--- Safe to run repeatedly. Runs automatically with `supabase db reset`.
+-- Fit-Manager — replace the studio network with 5 Niederrhein cities,
+-- two Filialen each (= 10 studios), every Filiale identical: 3 rooms
+-- with 10 / 20 / 30 Plätze.
+--
+-- Removing the old rooms sets courses.room_id -> null (FK on delete set
+-- null), so no course rows are lost — they simply lose their old room.
 -- ============================================================
 
+delete from public.rooms;
+delete from public.locations;
+
 insert into public.locations (id, name, city) values
-  -- Mönchengladbach
   ('10000000-0000-4000-8000-000000000001', 'Mönchengladbach Zentrum',  'Mönchengladbach'),
   ('10000000-0000-4000-8000-000000000002', 'Mönchengladbach Rheydt',   'Mönchengladbach'),
-  -- Köln
   ('20000000-0000-4000-8000-000000000001', 'Köln Innenstadt',          'Köln'),
   ('20000000-0000-4000-8000-000000000002', 'Köln Ehrenfeld',           'Köln'),
-  -- Düsseldorf
   ('30000000-0000-4000-8000-000000000001', 'Düsseldorf Altstadt',      'Düsseldorf'),
   ('30000000-0000-4000-8000-000000000002', 'Düsseldorf Bilk',          'Düsseldorf'),
-  -- Duisburg
   ('40000000-0000-4000-8000-000000000001', 'Duisburg Mitte',           'Duisburg'),
   ('40000000-0000-4000-8000-000000000002', 'Duisburg Hamborn',         'Duisburg'),
-  -- Krefeld
   ('50000000-0000-4000-8000-000000000001', 'Krefeld Zentrum',          'Krefeld'),
-  ('50000000-0000-4000-8000-000000000002', 'Krefeld Uerdingen',        'Krefeld')
-on conflict (id) do nothing;
+  ('50000000-0000-4000-8000-000000000002', 'Krefeld Uerdingen',        'Krefeld');
 
--- Every Filiale gets the SAME three rooms: 10 / 20 / 30 Plätze.
 insert into public.rooms (location_id, name, capacity)
 select l.id, r.name, r.capacity
 from public.locations l
@@ -31,16 +29,4 @@ cross join (values
   ('Studio Klein',  10),
   ('Studio Mittel', 20),
   ('Studio Groß',   30)
-) as r(name, capacity)
-on conflict (location_id, name) do nothing;
-
--- ============================================================
--- Promote the first admin AFTER you have signed up via the app:
---
---   update public.profiles
---   set role = 'admin', can_create_courses = true
---   where email = 'a.bidkhori2004@gmail.com';
---
--- To make a trainer able to create courses:
---   update public.profiles set role='trainer', can_create_courses=true where email='...';
--- ============================================================
+) as r(name, capacity);

@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { requireProfile, canManageCourses } from "@/lib/auth";
-import { getCoursesInHorizon, type EnrichedCourse } from "@/lib/queries";
+import {
+  getCoursesInHorizon,
+  getRegistrationCounts,
+  type EnrichedCourse,
+} from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/portal/ui";
 import { ExpandableCourseCard } from "@/components/portal/expandable-course-card";
@@ -13,6 +17,7 @@ export default async function KursePage() {
   const profile = await requireProfile();
   const manage = canManageCourses(profile);
   const courses = await getCoursesInHorizon();
+  const fillCounts = await getRegistrationCounts(courses.map((c) => c.id));
 
   // Kunde: which courses are they registered for?
   let registered = new Set<string>();
@@ -69,6 +74,7 @@ export default async function KursePage() {
                       course={c}
                       isRegistered={registered.has(c.id)}
                       role={profile.role}
+                      registeredCount={fillCounts.get(c.id) ?? 0}
                     />
                   </RevealItem>
                 ))}

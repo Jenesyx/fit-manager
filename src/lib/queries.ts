@@ -16,66 +16,112 @@ export type EnrichedCourse = CourseRow & {
 
 export type RoomWithLocation = RoomRow & { location_name: string };
 
-/** All courses within the next-2-weeks horizon, enriched with names. */
+/** Attach room / location / trainer names to raw course rows. */
+async function enrichCourses(courses: CourseRow[]): Promise<EnrichedCourse[]> {
+  if (!courses.length) return [];
+  const supabase = await createClient();
+
+  const roomIds = [
+    ...new Set(courses.map((c) => c.room_id).filter(Boolean)),
+  ] as string[];
+  const profileIds = [
+    ...new Set(
+      courses
+        .flatMap((c) => [
+          c.trainer_id,
+          c.substitute_trainer_id,
+          c.original_trainer_id,
+        ])
+        .filter(Boolean),
+    ),
+  ] as string[];
+
+  const [{ data: rooms }, { data: profiles }, { data: locations }] =
+    await Promise.all([
+      supabase.from("rooms").select("*").in("id", roomIds),
+      // RPC (SECURITY DEFINER) — resolves trainer/substitute names for ALL
+      // users. A plain profiles select is RLS-blocked to the caller's own row.
+      supabase.rpc("get_profile_names", { p_ids: profileIds }),
+      supabase.from("locations").select("*"),
+    ]);
+
+  const roomMap = new Map((rooms ?? []).map((r) => [r.id, r]));
+  const locMap = new Map(
+    ((locations as LocationRow[]) ?? []).map((l) => [l.id, l]),
+  );
+  const nameMap = new Map(
+    (profiles ?? []).map((p) => [p.id, p.full_name as string]),
+  );
+
+  return courses.map((c) => {
+    const room = c.room_id ? roomMap.get(c.room_id) : undefined;
+    const loc = room?.location_id ? locMap.get(room.location_id) : undefined;
+    return {
+      ...c,
+      room_name: room?.name ?? null,
+      location_name: loc?.name ?? null,
+      trainer_name: c.trainer_id ? (nameMap.get(c.trainer_id) ?? null) : null,
+      substitute_name: c.substitute_trainer_id
+        ? (nameMap.get(c.substitute_trainer_id) ?? null)
+        : null,
+      original_name: c.original_trainer_id
+        ? (nameMap.get(c.original_trainer_id) ?? null)
+        : null,
+    };
+  });
+}
+
+/** Active courses within the next-2-weeks horizon (archived excluded). */
 export async function getCoursesInHorizon(): Promise<EnrichedCourse[]> {
   const supabase = await createClient();
   try {
     const { data: courses } = await supabase
       .from("courses")
       .select("*")
+      .eq("archived", false)
       .gte("date", todayISO())
       .lte("date", horizonEndISO())
       .order("date")
       .order("start_time");
-
-    if (!courses?.length) return [];
-
-    const roomIds = [...new Set(courses.map((c) => c.room_id).filter(Boolean))];
-    const profileIds = [
-      ...new Set(
-        courses
-          .flatMap((c) => [
-            c.trainer_id,
-            c.substitute_trainer_id,
-            c.original_trainer_id,
-          ])
-          .filter(Boolean),
-      ),
-    ] as string[];
-
-    const [{ data: rooms }, { data: profiles }, { data: locations }] =
-      await Promise.all([
-        supabase.from("rooms").select("*").in("id", roomIds as string[]),
-        supabase.from("profiles").select("id, full_name").in("id", profileIds),
-        supabase.from("locations").select("*"),
-      ]);
-
-    const roomMap = new Map((rooms ?? []).map((r) => [r.id, r]));
-    const locMap = new Map(
-      ((locations as LocationRow[]) ?? []).map((l) => [l.id, l]),
-    );
-    const nameMap = new Map(
-      (profiles ?? []).map((p) => [p.id, p.full_name as string]),
-    );
-
-    return courses.map((c) => {
-      const room = c.room_id ? roomMap.get(c.room_id) : undefined;
-      const loc = room?.location_id ? locMap.get(room.location_id) : undefined;
-      return {
-        ...c,
-        room_name: room?.name ?? null,
-        location_name: loc?.name ?? null,
-        trainer_name: c.trainer_id ? (nameMap.get(c.trainer_id) ?? null) : null,
-        substitute_name: c.substitute_trainer_id
-          ? (nameMap.get(c.substitute_trainer_id) ?? null)
-          : null,
-        original_name: c.original_trainer_id
-          ? (nameMap.get(c.original_trainer_id) ?? null)
-          : null,
-      };
-    });
+    return await enrichCourses(courses ?? []);
   } catch {
     return [];
+  }
+}
+
+/** Every course (any date, incl. archived) — for the Admin Kursverwaltung. */
+export async function getAllCoursesAdmin(): Promise<EnrichedCourse[]> {
+  const supabase = await createClient();
+  try {
+    const { data: courses } = await supabase
+      .from("courses")
+      .select("*")
+      .order("date", { ascending: false })
+      .order("start_time");
+    return await enrichCourses(courses ?? []);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Total registrations per course, keyed by course id. Uses a SECURITY
+ * DEFINER RPC so Kunden see real fill counts (RLS hides others' rows).
+ */
+export async function getRegistrationCounts(
+  courseIds: string[],
+): Promise<Map<string, number>> {
+  if (!courseIds.length) return new Map();
+  const supabase = await createClient();
+  try {
+    const { data } = await supabase.rpc("get_course_registration_counts", {
+      p_ids: courseIds,
+    });
+    return new Map(
+      (data ?? []).map((r) => [r.course_id, Number(r.registered)]),
+    );
+  } catch {
+    return new Map();
   }
 }
 
