@@ -47,7 +47,7 @@ export default async function KursErstellenPage() {
         trainers={trainers.map((t) => ({ id: t.id, full_name: t.full_name }))}
         existing={existing}
         minDate={todayISO()}
-        maxDate={horizonEndISO()}
+        maxDate={profile.role === "admin" ? undefined : horizonEndISO()}
         isAdmin={profile.role === "admin"}
       />
     </div>

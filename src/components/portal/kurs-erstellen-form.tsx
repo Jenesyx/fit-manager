@@ -74,11 +74,14 @@ export function KursErstellenForm({
   trainers: Trainer[];
   existing: ExistingCourse[];
   minDate: string;
-  maxDate: string;
+  maxDate: string | undefined;
   isAdmin: boolean;
 }) {
   const router = useRouter();
-  const seriesMaxDate = useMemo(() => seriesHorizonEndISO(), []);
+  const seriesMaxDate = useMemo(
+    () => (isAdmin ? undefined : seriesHorizonEndISO()),
+    [isAdmin],
+  );
 
   // Single-course action state
   const [singleState, singleFormAction, singlePending] = useActionState<
@@ -116,7 +119,7 @@ export function KursErstellenForm({
   const [selectedDays, setSelectedDays] = useState<Set<number>>(new Set());
   const [intervalWeeks, setIntervalWeeks] = useState(1);
   const [seriesStart, setSeriesStart] = useState(minDate);
-  const [seriesEnd, setSeriesEnd] = useState(seriesMaxDate);
+  const [seriesEnd, setSeriesEnd] = useState(seriesMaxDate ?? "");
 
   const rooms = useMemo(
     () => locations.find((l) => l.id === locationId)?.rooms ?? [],
@@ -129,7 +132,8 @@ export function KursErstellenForm({
     validTimes && existing.some((e) => e.room_id === rid && overlaps({ date, start, end }, e));
 
   // Single-course conflicts
-  const inHorizon = !!date && date >= minDate && date <= maxDate;
+  const inHorizon =
+    !!date && date >= minDate && (maxDate === undefined || date <= maxDate);
   const roomConflict = roomId ? roomBusy(roomId) : false;
   const trainerConflict =
     !!trainerId &&
@@ -498,14 +502,14 @@ export function KursErstellenForm({
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Serien können maximal 4 Wochen im Voraus geplant werden. Termine mit Raum- oder Trainer-Konflikt werden automatisch übersprungen.
+                  Termine mit Raum- oder Trainer-Konflikt werden automatisch übersprungen.
                 </p>
               </div>
             )}
           </div>
         )}
 
-        {!isRecurring && (
+        {!isRecurring && !isAdmin && (
           <p className="rounded-md border border-hairline bg-(--color-canvas-soft) px-3 py-2 text-xs text-muted-foreground">
             Kurse können nur für die nächsten zwei Wochen geplant werden.
           </p>

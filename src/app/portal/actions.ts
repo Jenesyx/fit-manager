@@ -35,7 +35,7 @@ export async function createCourseAction(
     return { error: "Bitte fülle alle Pflichtfelder aus." };
   if (end_time <= start_time)
     return { error: "Die Endzeit muss nach der Startzeit liegen." };
-  if (!isWithinHorizon(date))
+  if (profile.role !== "admin" && !isWithinHorizon(date))
     return {
       error: "Kurse können nur für die nächsten zwei Wochen geplant werden.",
     };
@@ -155,7 +155,7 @@ export async function createRecurringCoursesAction(
   const maxEnd = seriesHorizonEndISO();
   if (series_start < today)
     return { error: "Das Startdatum darf nicht in der Vergangenheit liegen." };
-  if (series_end > maxEnd)
+  if (profile.role !== "admin" && series_end > maxEnd)
     return { error: "Kurse können maximal 4 Wochen im Voraus geplant werden." };
 
   const dowIndices = weekdays_raw
