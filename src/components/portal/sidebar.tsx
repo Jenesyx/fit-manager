@@ -10,6 +10,7 @@ import {
   HeartPulse,
   Users,
   Settings,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -45,6 +46,12 @@ const NAV: NavItem[] = [
     label: "Krankmeldung",
     icon: HeartPulse,
     show: ({ role }) => role === "trainer" || role === "admin",
+  },
+  {
+    href: "/portal/krankmeldung/alle",
+    label: "Alle Krankmeldungen",
+    icon: FileText,
+    show: ({ role }) => role === "admin",
   },
   {
     href: "/portal/trainer",

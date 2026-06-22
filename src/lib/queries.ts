@@ -234,3 +234,50 @@ export async function getAllProfiles(): Promise<
     return [];
   }
 }
+
+export type SickLeave = Database["public"]["Tables"]["sick_leaves"]["Row"];
+
+export type SickLeaveWithTrainer = SickLeave & {
+  trainer_name: string | null;
+};
+
+/** Own sick leaves for the current trainer, newest first. RLS restricts to caller's own rows. */
+export async function getMySickLeaves(): Promise<SickLeave[]> {
+  const supabase = await createClient();
+  try {
+    const { data } = await supabase
+      .from("sick_leaves")
+      .select("*")
+      .order("start_date", { ascending: false });
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/** All sick leaves with trainer names — admin only (RLS allows admin to read all). */
+export async function getAllSickLeavesAdmin(): Promise<SickLeaveWithTrainer[]> {
+  const supabase = await createClient();
+  try {
+    const { data: leaves } = await supabase
+      .from("sick_leaves")
+      .select("*")
+      .order("start_date", { ascending: false });
+    if (!leaves?.length) return [];
+
+    const ids = [...new Set(leaves.map((l) => l.trainer_id))];
+    const { data: names } = await supabase.rpc("get_profile_names", {
+      p_ids: ids,
+    });
+    const nameMap = new Map(
+      (names ?? []).map((p) => [p.id, p.full_name as string]),
+    );
+
+    return leaves.map((l) => ({
+      ...l,
+      trainer_name: nameMap.get(l.trainer_id) ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
