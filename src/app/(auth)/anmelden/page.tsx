@@ -17,7 +17,7 @@ export default async function AnmeldenPage({
           Willkommen zurück
         </h1>
         <p className="text-sm text-muted-foreground">
-          Melde dich an, um auf dein Fit-Manager-Konto zuzugreifen.
+          Melde dich an, um auf dein Fit Manager Konto zuzugreifen.
         </p>
       </div>
 

@@ -30,12 +30,21 @@ export async function signInAction(
   const password = String(formData.get("password") ?? "");
   const weiter = String(formData.get("weiter") ?? "");
 
+  console.log("[signIn] attempt", { email, weiter });
+  console.log("[signIn] NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log("[signIn] NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY exists:", !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+
   if (!email || !password) return { error: "Bitte fülle alle Felder aus." };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: translateAuthError(error.message) };
 
+  if (error) {
+    console.error("[signIn] Supabase error:", error.message, error.status, error.code);
+    return { error: `${translateAuthError(error.message)} [DEBUG: ${error.message}]` };
+  }
+
+  console.log("[signIn] success, redirecting to", weiter || "/portal/dashboard");
   redirect(weiter && weiter.startsWith("/portal") ? weiter : "/portal/dashboard");
 }
 
@@ -46,6 +55,11 @@ export async function signUpAction(
   const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+
+  const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
+  console.log("[signUp] attempt", { email, fullName });
+  console.log("[signUp] emailRedirectTo:", redirectTo);
+  console.log("[signUp] NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
 
   if (!fullName || !email || !password)
     return { error: "Bitte fülle alle Felder aus." };
@@ -58,10 +72,16 @@ export async function signUpAction(
     password,
     options: {
       data: { full_name: fullName },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      emailRedirectTo: redirectTo,
     },
   });
-  if (error) return { error: translateAuthError(error.message) };
+
+  if (error) {
+    console.error("[signUp] Supabase error:", error.message, error.status, error.code);
+    return { error: `${translateAuthError(error.message)} [DEBUG: ${error.message}]` };
+  }
+
+  console.log("[signUp] success. session:", !!data.session, "user:", data.user?.id);
 
   // If confirmations are off, a session is returned → go straight to the portal.
   if (data.session) redirect("/portal/dashboard");
@@ -79,12 +99,21 @@ export async function resetPasswordAction(
   const email = String(formData.get("email") ?? "").trim();
   if (!email) return { error: "Bitte gib deine E-Mail-Adresse ein." };
 
+  const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
+  console.log("[resetPassword] attempt", { email });
+  console.log("[resetPassword] redirectTo:", redirectTo);
+
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+    redirectTo,
   });
-  if (error) return { error: translateAuthError(error.message) };
 
+  if (error) {
+    console.error("[resetPassword] Supabase error:", error.message, error.status, error.code);
+    return { error: `${translateAuthError(error.message)} [DEBUG: ${error.message}]` };
+  }
+
+  console.log("[resetPassword] email sent successfully");
   return {
     message:
       "Wenn ein Konto existiert, haben wir dir einen Link zum Zurücksetzen geschickt.",
