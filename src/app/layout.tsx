@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Fit-Manager · Kurs- & Trainerverwaltung",
   description:
-    "Fit-Manager — die Plattform für Kurs- und Trainerverwaltung im Fitnessstudio Fit & Aktiv. Automatische Vertretung, Stundenplan und Rollenverwaltung.",
+    "Fit-Manager, die Plattform für Kurs- und Trainerverwaltung im Fitnessstudio Fit & Aktiv. Automatische Vertretung, Stundenplan und Rollenverwaltung.",
 };
 
 export default function RootLayout({

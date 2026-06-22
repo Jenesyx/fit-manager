@@ -57,7 +57,7 @@ export default async function KursVerwaltungPage() {
       <PageHeader
         eyebrow="Administration"
         title="Kursverwaltung"
-        subtitle="Alle Kurse einsehen und verwalten — bearbeiten, Trainer & Raum ändern, archivieren oder löschen. Neue Trainer-Rechte unter Trainerverwaltung."
+        subtitle="Alle Kurse einsehen und verwalten: bearbeiten, Trainer & Raum ändern, archivieren oder löschen. Neue Trainer-Rechte unter Trainerverwaltung."
         action={
           <Button asChild>
             <Link href="/portal/kurse/erstellen">

@@ -35,7 +35,7 @@ const COURSES = [
   {
     icon: Dumbbell,
     title: "Krafttraining",
-    body: "Freihantel- und Gerätebereich auf über 600 m² — vom Einstieg bis zum Maximalkraft-Aufbau.",
+    body: "Freihantel- und Gerätebereich auf über 600 m², vom Einstieg bis zum Maximalkraft-Aufbau.",
   },
   {
     icon: Flame,
@@ -50,7 +50,7 @@ const COURSES = [
   {
     icon: Leaf,
     title: "Yoga & Mobility",
-    body: "Beweglichkeit, Atem und Regeneration — für Kopf und Körper.",
+    body: "Beweglichkeit, Atem und Regeneration, für Kopf und Körper.",
   },
   {
     icon: Waves,
@@ -65,7 +65,7 @@ const COURSES = [
   {
     icon: Zap,
     title: "Boxen & Cardio",
-    body: "Technik am Sack, Conditioning im Ring — Auspowern garantiert.",
+    body: "Technik am Sack, Conditioning im Ring. Auspowern garantiert.",
   },
   {
     icon: HeartPulse,
@@ -86,12 +86,12 @@ const BENEFITS = [
   {
     icon: CalendarCheck,
     title: "Alle Kurse inklusive",
-    body: "Über 40 Kurse pro Woche — ohne Aufpreis, einfach reinkommen und mitmachen.",
+    body: "Über 40 Kurse pro Woche, ohne Aufpreis, einfach reinkommen und mitmachen.",
   },
   {
     icon: Clock,
     title: "Täglich 6–23 Uhr",
-    body: "Früh vor der Arbeit oder spät am Abend — du trainierst, wann es dir passt.",
+    body: "Früh vor der Arbeit oder spät am Abend, du trainierst, wann es dir passt.",
   },
   {
     icon: BadgeCheck,
@@ -101,7 +101,7 @@ const BENEFITS = [
   {
     icon: MapPin,
     title: "In jedem Studio trainieren",
-    body: "Eine Mitgliedschaft, alle 10 Standorte — auch unterwegs in deiner Stadt.",
+    body: "Eine Mitgliedschaft, alle 10 Standorte, auch unterwegs in deiner Stadt.",
   },
 ];
 
@@ -178,7 +178,7 @@ export default function HomePage() {
                 </h2>
                 <p className="mt-4 text-lg text-body">
                   Egal ob du Kraft aufbauen, abnehmen oder einfach abschalten
-                  willst — bei uns findest du den Kurs, der dich begeistert.
+                  willst, bei uns findest du den Kurs, der dich begeistert.
                 </p>
               </Reveal>
 
@@ -323,7 +323,7 @@ export default function HomePage() {
                   </h2>
                   <p className="relative mx-auto mt-4 max-w-md text-lg text-body">
                     Komm zum kostenlosen Probetraining in eines unserer 10 Studios
-                    — ganz ohne Vertragsbindung.
+                    ganz ohne Vertragsbindung.
                   </p>
                   <div className="relative mt-8 flex flex-wrap justify-center gap-3">
                     <Button asChild size="lg" className="font-semibold">

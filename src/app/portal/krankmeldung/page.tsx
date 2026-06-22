@@ -28,7 +28,7 @@ export default async function KrankmeldungPage() {
       <PageHeader
         eyebrow="Hauptprozess"
         title="Krankmeldung erfassen"
-        subtitle="Melde dich krank — das System sucht automatisch nach Vertretungen für deine Kurse."
+        subtitle="Melde dich krank, das System sucht automatisch nach Vertretungen für deine Kurse."
       />
       <KrankmeldungForm
         minDate={todayISO()}

@@ -110,7 +110,7 @@ export function Hero() {
           <span className="text-primary">Jeden einzelnen Tag.</span>
         </h1>
         <p className="mt-6 max-w-xl text-lg text-body md:text-xl">
-          Über 1.200 Mitglieder trainieren bei Fit·Manager — moderne Studios,
+          Über 1.200 Mitglieder trainieren bei Fit·Manager. Moderne Studios,
           40+ Kurse pro Woche und Trainer, die dich wirklich weiterbringen.
         </p>
         <div className="mt-9 flex flex-wrap items-center gap-3">
