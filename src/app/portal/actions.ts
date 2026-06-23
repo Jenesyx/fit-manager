@@ -405,6 +405,19 @@ export async function deleteCourseAction(formData: FormData): Promise<void> {
   revalidateCourses();
 }
 
+export async function deleteCoursesAction(formData: FormData): Promise<void> {
+  const profile = await getProfile();
+  if (!profile || !canManageCourses(profile)) return;
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!ids.length) return;
+  const supabase = await createClient();
+  await supabase.from("courses").delete().in("id", ids);
+  revalidateCourses();
+}
+
 export async function setCourseArchivedAction(
   formData: FormData,
 ): Promise<void> {

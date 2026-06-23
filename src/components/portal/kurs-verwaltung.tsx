@@ -31,6 +31,7 @@ import { StatusPill } from "@/components/portal/ui";
 import {
   updateCourseAction,
   deleteCourseAction,
+  deleteCoursesAction,
   setCourseArchivedAction,
   type ActionState,
 } from "@/app/portal/actions";
@@ -92,6 +93,8 @@ export function KursVerwaltung({
   const [showArchived, setShowArchived] = useState(false);
   const [editing, setEditing] = useState<CourseRow | null>(null);
   const [deleting, setDeleting] = useState<CourseRow | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -108,6 +111,30 @@ export function KursVerwaltung({
       return true;
     });
   }, [courses, query, statusFilter, showArchived]);
+
+  const filteredIds = useMemo(() => filtered.map((c) => c.id), [filtered]);
+  const allSelected =
+    filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
+  const someSelected =
+    !allSelected && filteredIds.some((id) => selected.has(id));
+
+  function toggleAll() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allSelected) filteredIds.forEach((id) => next.delete(id));
+      else filteredIds.forEach((id) => next.add(id));
+      return next;
+    });
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -147,11 +174,47 @@ export function KursVerwaltung({
         </label>
       </div>
 
+      {/* ---------- Bulk action bar ---------- */}
+      {selected.size > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-hairline bg-[var(--color-canvas-soft)] px-4 py-2.5 text-sm">
+          <span className="font-medium text-ink-strong">
+            {selected.size} ausgewählt
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setBulkOpen(true)}
+          >
+            <Trash2 className="size-4" />
+            Löschen
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelected(new Set())}
+          >
+            Auswahl aufheben
+          </Button>
+        </div>
+      ) : null}
+
       {/* ---------- Table ---------- */}
       <div className="card-hairline overflow-x-auto">
         <table className="w-full min-w-[920px] text-sm">
           <thead>
             <tr className="border-b border-hairline text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <th className="w-10 px-5 py-3">
+                <input
+                  type="checkbox"
+                  aria-label="Alle auswählen"
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected;
+                  }}
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  className="size-4 accent-[var(--color-primary)] align-middle"
+                />
+              </th>
               <th className="px-5 py-3 font-medium">Kurs</th>
               <th className="px-5 py-3 font-medium">Datum</th>
               <th className="px-5 py-3 font-medium">Zeit</th>
@@ -169,8 +232,18 @@ export function KursVerwaltung({
                 className={cn(
                   "border-b border-hairline/50 last:border-0 align-top",
                   c.archived && "opacity-55",
+                  selected.has(c.id) && "bg-[var(--color-canvas-soft)]",
                 )}
               >
+                <td className="px-5 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label={`„${c.name}“ auswählen`}
+                    checked={selected.has(c.id)}
+                    onChange={() => toggleOne(c.id)}
+                    className="size-4 accent-[var(--color-primary)] align-middle"
+                  />
+                </td>
                 <td className="px-5 py-3">
                   <div className="font-medium text-ink-strong">{c.name}</div>
                   {c.archived ? (
@@ -237,7 +310,7 @@ export function KursVerwaltung({
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-5 py-10 text-center text-muted-foreground"
                 >
                   Keine Kurse gefunden.
@@ -280,7 +353,72 @@ export function KursVerwaltung({
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {/* ---------- Bulk delete confirm ---------- */}
+      <Dialog open={bulkOpen} onOpenChange={(o) => !o && setBulkOpen(false)}>
+        <DialogContent>
+          {bulkOpen ? (
+            <BulkDeleteConfirm
+              ids={[...selected]}
+              count={selected.size}
+              onDone={() => {
+                setBulkOpen(false);
+                setSelected(new Set());
+              }}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+/* ---------- Bulk delete confirmation ---------- */
+function BulkDeleteConfirm({
+  ids,
+  count,
+  onDone,
+}: {
+  ids: string[];
+  count: number;
+  onDone: () => void;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const noun = count === 1 ? "Kurs" : "Kurse";
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <AlertTriangle className="size-4 text-[var(--color-status-abgesagt)]" />
+          {count} {noun} löschen
+        </DialogTitle>
+        <DialogDescription>
+          {count} ausgewählte {noun} werden endgültig gelöscht. Alle Anmeldungen
+          dazu gehen verloren. Dies kann nicht rückgängig gemacht werden.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={onDone} disabled={pending}>
+          Abbrechen
+        </Button>
+        <Button
+          variant="destructive"
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              const fd = new FormData();
+              fd.set("ids", ids.join(","));
+              await deleteCoursesAction(fd);
+              router.refresh();
+              onDone();
+            })
+          }
+        >
+          {pending ? "Wird gelöscht…" : `${count} ${noun} löschen`}
+        </Button>
+      </div>
+    </>
   );
 }
 

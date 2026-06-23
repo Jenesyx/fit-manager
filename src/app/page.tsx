@@ -129,7 +129,7 @@ const TESTIMONIALS = [
 export default function HomePage() {
   return (
     <>
-      {/* ── Cinematic autoplay video hero (one screen tall) ───────────────── */}
+      {/* ── Cinematic scroll-triggered video hero (pinned while it plays) ──── */}
       <Hero />
 
       {/*

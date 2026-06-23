@@ -32,7 +32,10 @@ export default function RootLayout({
       className={`dark ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body
+        className="min-h-full flex flex-col bg-background text-foreground"
+        suppressHydrationWarning
+      >
         {children}
         <Toaster position="top-right" theme="dark" richColors />
       </body>
