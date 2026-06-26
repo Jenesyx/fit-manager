@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, canManageCourses } from "@/lib/auth";
-import { isWithinHorizon, seriesHorizonEndISO, generateSeriesDates } from "@/lib/dates";
+import { isWithinHorizon, seriesHorizonEndISO, generateSeriesDates, timeToMinutes } from "@/lib/dates";
 import type { CourseStatus, UserRole } from "@/lib/database.types";
 
 export type ActionState = { error?: string; message?: string };
@@ -69,19 +69,60 @@ export async function createCourseAction(
     }
   }
 
-  // Trainer conflict: one trainer can only run one active course per slot.
+  // Trainer-Konfliktprüfung: gleiches Studio → kein Puffer nötig; anderes Studio → 60 Min. Pause.
   if (trainer_id && status !== "abgesagt") {
-    const { data: trainerClash } = await supabase
+    let newLocationId: string | null = null;
+    if (room_id) {
+      const { data: newRoom } = await supabase
+        .from("rooms")
+        .select("location_id")
+        .eq("id", room_id)
+        .maybeSingle();
+      newLocationId = newRoom?.location_id ?? null;
+    }
+
+    const { data: trainerCourses } = await supabase
       .from("courses")
-      .select("id")
+      .select("start_time, end_time, room_id")
       .eq("trainer_id", trainer_id)
       .eq("date", date)
-      .neq("status", "abgesagt")
-      .lt("start_time", end_time)
-      .gt("end_time", start_time)
-      .limit(1);
-    if (trainerClash && trainerClash.length > 0)
-      return { error: "Dieser Trainer ist zu dieser Zeit bereits belegt." };
+      .neq("status", "abgesagt");
+
+    if (trainerCourses && trainerCourses.length > 0) {
+      const roomIds = [
+        ...new Set(trainerCourses.map((c) => c.room_id).filter((id): id is string => id !== null)),
+      ];
+      const roomLocationMap: Record<string, string> = {};
+      if (roomIds.length > 0) {
+        const { data: rooms } = await supabase
+          .from("rooms")
+          .select("id, location_id")
+          .in("id", roomIds);
+        if (rooms) for (const r of rooms) roomLocationMap[r.id] = r.location_id;
+      }
+
+      const newS = timeToMinutes(start_time);
+      const newE = timeToMinutes(end_time);
+
+      for (const c of trainerCourses) {
+        const es = timeToMinutes(c.start_time);
+        const ee = timeToMinutes(c.end_time);
+        const existingLocId = c.room_id ? (roomLocationMap[c.room_id] ?? null) : null;
+        const sameLocation =
+          newLocationId !== null && existingLocId !== null && newLocationId === existingLocId;
+
+        if (sameLocation) {
+          if (newS < ee && es < newE)
+            return { error: "Dieser Trainer ist zu dieser Zeit bereits belegt." };
+        } else {
+          if (newS < ee + 60 && es < newE + 60)
+            return {
+              error:
+                "Dieser Trainer benötigt mindestens 60 Minuten Pause zwischen Kursen in verschiedenen Studios.",
+            };
+        }
+      }
+    }
   }
 
   const { error } = await supabase.from("courses").insert({
@@ -192,13 +233,45 @@ export async function createRecurringCoursesAction(
     .lte("date", series_end)
     .neq("status", "abgesagt");
 
-  const existingList = (existing ?? []) as {
+  // Standort des neuen Serienkurses ermitteln
+  let seriesLocationId: string | null = null;
+  if (room_id) {
+    const { data: seriesRoom } = await supabase
+      .from("rooms")
+      .select("location_id")
+      .eq("id", room_id)
+      .maybeSingle();
+    seriesLocationId = seriesRoom?.location_id ?? null;
+  }
+
+  // Standorte aller vorhandenen Kursräume vorab laden
+  const allExistingRoomIds = [
+    ...new Set(
+      (existing ?? []).map((e) => e.room_id).filter((id): id is string => id !== null),
+    ),
+  ];
+  const seriesRoomLocationMap: Record<string, string> = {};
+  if (allExistingRoomIds.length > 0) {
+    const { data: allRooms } = await supabase
+      .from("rooms")
+      .select("id, location_id")
+      .in("id", allExistingRoomIds);
+    if (allRooms) for (const r of allRooms) seriesRoomLocationMap[r.id] = r.location_id;
+  }
+
+  type ExistingSlot = {
     date: string;
     start_time: string;
     end_time: string;
     room_id: string | null;
     trainer_id: string | null;
-  }[];
+    location_id: string | null;
+  };
+
+  const existingList: ExistingSlot[] = (existing ?? []).map((e) => ({
+    ...e,
+    location_id: e.room_id ? (seriesRoomLocationMap[e.room_id] ?? null) : null,
+  }));
 
   const series_id = crypto.randomUUID();
   type SeriesRow = {
@@ -233,14 +306,18 @@ export async function createRecurringCoursesAction(
     }
 
     if (trainer_id && status !== "abgesagt") {
-      const trainerClash = daySlots.some(
-        (e) =>
-          e.trainer_id === trainer_id &&
-          e.start_time < end_time &&
-          e.end_time > start_time,
-      );
+      const newS = timeToMinutes(start_time);
+      const newE = timeToMinutes(end_time);
+      const trainerClash = daySlots.some((e) => {
+        if (e.trainer_id !== trainer_id) return false;
+        const es = timeToMinutes(e.start_time);
+        const ee = timeToMinutes(e.end_time);
+        const sameLocation =
+          seriesLocationId !== null && e.location_id !== null && seriesLocationId === e.location_id;
+        return sameLocation ? newS < ee && es < newE : newS < ee + 60 && es < newE + 60;
+      });
       if (trainerClash) {
-        skipped.push({ date, reason: "Trainer belegt" });
+        skipped.push({ date, reason: "Trainer belegt (Überschneidung oder zu wenig Pause)" });
         continue;
       }
     }
@@ -258,7 +335,7 @@ export async function createRecurringCoursesAction(
       series_id,
     });
     // Shadow into existingList so later same-day series entries see themselves
-    existingList.push({ date, start_time, end_time, room_id, trainer_id });
+    existingList.push({ date, start_time, end_time, room_id, trainer_id, location_id: seriesLocationId });
   }
 
   if (!toInsert.length)
@@ -352,20 +429,61 @@ export async function updateCourseAction(
     }
   }
 
-  // Trainer conflict (exclude self).
+  // Trainer-Konfliktprüfung (eigenen Kurs ausschließen): gleiches Studio → kein Puffer; anderes → 60 Min.
   if (trainer_id && status !== "abgesagt") {
-    const { data: trainerClash } = await supabase
+    let newLocationId: string | null = null;
+    if (room_id) {
+      const { data: newRoom } = await supabase
+        .from("rooms")
+        .select("location_id")
+        .eq("id", room_id)
+        .maybeSingle();
+      newLocationId = newRoom?.location_id ?? null;
+    }
+
+    const { data: trainerCourses } = await supabase
       .from("courses")
-      .select("id")
+      .select("start_time, end_time, room_id")
       .eq("trainer_id", trainer_id)
       .eq("date", date)
       .neq("id", id)
-      .neq("status", "abgesagt")
-      .lt("start_time", end_time)
-      .gt("end_time", start_time)
-      .limit(1);
-    if (trainerClash && trainerClash.length > 0)
-      return { error: "Dieser Trainer ist zu dieser Zeit bereits belegt." };
+      .neq("status", "abgesagt");
+
+    if (trainerCourses && trainerCourses.length > 0) {
+      const roomIds = [
+        ...new Set(trainerCourses.map((c) => c.room_id).filter((id): id is string => id !== null)),
+      ];
+      const roomLocationMap: Record<string, string> = {};
+      if (roomIds.length > 0) {
+        const { data: rooms } = await supabase
+          .from("rooms")
+          .select("id, location_id")
+          .in("id", roomIds);
+        if (rooms) for (const r of rooms) roomLocationMap[r.id] = r.location_id;
+      }
+
+      const newS = timeToMinutes(start_time);
+      const newE = timeToMinutes(end_time);
+
+      for (const c of trainerCourses) {
+        const es = timeToMinutes(c.start_time);
+        const ee = timeToMinutes(c.end_time);
+        const existingLocId = c.room_id ? (roomLocationMap[c.room_id] ?? null) : null;
+        const sameLocation =
+          newLocationId !== null && existingLocId !== null && newLocationId === existingLocId;
+
+        if (sameLocation) {
+          if (newS < ee && es < newE)
+            return { error: "Dieser Trainer ist zu dieser Zeit bereits belegt." };
+        } else {
+          if (newS < ee + 60 && es < newE + 60)
+            return {
+              error:
+                "Dieser Trainer benötigt mindestens 60 Minuten Pause zwischen Kursen in verschiedenen Studios.",
+            };
+        }
+      }
+    }
   }
 
   const { error } = await supabase

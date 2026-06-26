@@ -102,4 +102,10 @@ export function generateSeriesDates(
   return dates.sort();
 }
 
+/** "HH:MM:SS" oder "HH:MM" → Minuten seit Mitternacht. */
+export function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+
 export { addDays, format, parseISO };
